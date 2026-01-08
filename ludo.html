@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Phil'o'Jeux - Donzère</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Bubblegum+Sans&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --brand-primary: #6366f1;
+            --brand-accent: #f59e0b;
+            --bg-main: #fefce8;
+        }
+        body { 
+            font-family: 'Outfit', sans-serif; 
+            background-color: var(--bg-main);
+            background-image: radial-gradient(#fde047 0.5px, transparent 0.5px);
+            background-size: 24px 24px;
+            -webkit-tap-highlight-color: transparent;
+            overflow-x: hidden;
+        }
+        
+        h1, .fun-title {
+            font-family: 'Bubblegum Sans', cursive;
+        }
+
+        .safe-area-bottom { padding-bottom: calc(env(safe-area-inset-bottom) + 100px); }
+        
+        .glass-header {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(8px);
+            border-bottom: 4px solid #facc15;
+        }
+
+        .avatar-ring {
+            width: 58px;
+            height: 58px;
+            border-radius: 24px;
+            overflow: hidden;
+            border: 3px solid #fbbf24;
+            transform: rotate(-3deg);
+            box-shadow: 4px 4px 0px #f59e0b;
+        }
+
+        .chip {
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            white-space: nowrap;
+            border: 2px solid transparent;
+            flex: 0 0 auto;
+            opacity: 0.7; /* Légèrement transparent quand inactif */
+            filter: grayscale(0.5);
+        }
+        .chip.active {
+            background-color: #fbbf24;
+            color: #78350f;
+            border-color: #f59e0b;
+            transform: scale(1.05) rotate(2deg);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+            opacity: 1;
+            filter: grayscale(0);
+        }
+
+        .chips-scroll-wrapper {
+            display: flex;
+            overflow-x: auto;
+            overflow-y: hidden;
+            gap: 12px;
+            padding: 10px 20px;
+            margin: 0 -24px 20px -24px;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        .chips-scroll-wrapper::-webkit-scrollbar {
+            display: none;
+        }
+
+        .game-card {
+            border-radius: 20px; /* Un peu moins arrondi pour les petites cartes */
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .floating-add {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            background: linear-gradient(135deg, #f59e0b, #ef4444);
+            box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4), inset 0 -4px 0 rgba(0,0,0,0.2);
+            border: 3px solid white;
+        }
+
+        .view-transition {
+            display: none;
+            animation: bounceIn 0.4s ease-out;
+        }
+        .view-transition.active { display: block; }
+
+        @keyframes bounceIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* Couleurs Styles */
+        .style-Ambiance { background: #fdf2f8; border-color: #f472b6; color: #9d174d; }
+        .style-Plateau { background: #eff6ff; border-color: #60a5fa; color: #1e40af; }
+        .style-Cartes { background: #f0fdf4; border-color: #4ade80; color: #166534; }
+        .style-Stratégie { background: #faf5ff; border-color: #a78bfa; color: #5b21b6; }
+        .style-Dés { background: #fff7ed; border-color: #fb923c; color: #9a3412; }
+
+        #loadingOverlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Select personnalisé pour l'âge */
+        .custom-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1em;
+        }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <div id="loadingOverlay">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-indigo-600 mb-4"></div>
+        <p class="font-black text-indigo-600 animate-pulse">Connexion à la ludo...</p>
+    </div>
+
+    <header class="glass-header sticky top-0 z-40 px-6 py-4 shadow-lg">
+        <div class="max-w-2xl mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl text-indigo-600 drop-shadow-sm">Phil'o'Jeux 🎲</h1>
+                <p id="statsCounter" class="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em]">Chargement...</p>
+            </div>
+            <div class="avatar-ring bg-white">
+                <img src="PhilippeCartoon.jpeg" alt="Philippe" class="w-full h-full object-cover" onerror="this.src='https://ui-avatars.com/api/?name=Philippe&background=6366f1&color=fff'">
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-2xl mx-auto px-6 pt-6 safe-area-bottom">
+        
+        <section id="view-library" class="view-transition active">
+            <!-- Barre de recherche -->
+            <div class="relative mb-4">
+                <i data-lucide="search" class="absolute left-5 top-1/2 -translate-y-1/2 text-indigo-400 w-6 h-6"></i>
+                <input type="text" id="searchInput" placeholder="Chercher un jeu..." 
+                    class="w-full pl-14 pr-6 py-5 bg-white border-4 border-indigo-100 rounded-[30px] shadow-inner focus:border-indigo-400 outline-none transition-all placeholder:text-slate-300 text-xl font-bold italic">
+            </div>
+            
+            <!-- Filtre Age & Joueurs (Regroupés) -->
+            <div class="flex gap-4 mb-6 overflow-x-auto pb-2 no-scrollbar">
+                 <!-- Filtre Age -->
+                <div class="bg-white border-4 border-indigo-50 rounded-2xl p-1 flex-1 min-w-[140px]">
+                    <select id="filterAge" class="w-full bg-transparent p-2 font-bold text-indigo-600 text-sm outline-none custom-select">
+                        <option value="all">👶 Tous âges</option>
+                        <option value="6-8">6-8 ans</option>
+                        <option value="8-10">8-10 ans</option>
+                        <option value="+10">10 ans et +</option>
+                    </select>
+                </div>
+                 <!-- Filtre Nb Joueurs (Simplifié pour gain de place) -->
+                 <div class="bg-white border-4 border-indigo-50 rounded-2xl p-1 flex-1 min-w-[140px]">
+                    <select id="filterPlayerCountSelect" class="w-full bg-transparent p-2 font-bold text-indigo-600 text-sm outline-none custom-select">
+                        <option value="0">👥 Tous joueurs</option>
+                        <option value="2">2 joueurs</option>
+                        <option value="4">4 joueurs</option>
+                        <option value="6">6+ joueurs</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Chips Catégories (Multi-select) -->
+            <div class="chips-scroll-wrapper">
+                <div class="chip active px-6 py-3 rounded-2xl bg-white shadow-md text-sm font-bold border-b-4 border-slate-200" onclick="toggleStyle('all', this)">🌈 Tous</div>
+                <div class="chip px-6 py-3 rounded-2xl bg-white shadow-md text-sm font-bold border-b-4 border-slate-200" onclick="toggleStyle('Plateau', this)">🏰 Plateau</div>
+                <div class="chip px-6 py-3 rounded-2xl bg-white shadow-md text-sm font-bold border-b-4 border-slate-200" onclick="toggleStyle('Cartes', this)">🃏 Cartes</div>
+                <div class="chip px-6 py-3 rounded-2xl bg-white shadow-md text-sm font-bold border-b-4 border-slate-200" onclick="toggleStyle('Ambiance', this)">🥳 Ambiance</div>
+                <div class="chip px-6 py-3 rounded-2xl bg-white shadow-md text-sm font-bold border-b-4 border-slate-200" onclick="toggleStyle('Dés', this)">🎲 Dés</div>
+                <div class="chip px-6 py-3 rounded-2xl bg-white shadow-md text-sm font-bold border-b-4 border-slate-200" onclick="toggleStyle('Stratégie', this)">🧠 Stratégie</div>
+            </div>
+
+            <!-- Barre de titre et Reset -->
+            <div class="flex justify-between items-center mt-2 mb-4 px-1">
+                <h3 class="font-black text-slate-400 uppercase tracking-widest text-xs">La Collection</h3>
+                <button onclick="resetFilters()" class="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-3 py-1.5 rounded-full hover:bg-indigo-100 transition-colors shadow-sm border border-indigo-100 flex items-center gap-1">
+                    Réinitialiser tout <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+                </button>
+            </div>
+
+            <!-- Conteneur MOSAÏQUE (2 colonnes) -->
+            <div id="gamesContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 pb-10"></div>
+            
+            <div id="emptyState" class="hidden text-center py-20 col-span-2">
+                <div class="bg-white w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl border-4 border-dashed border-slate-200">
+                    <i data-lucide="ghost" class="text-slate-300 w-10 h-10"></i>
+                </div>
+                <p class="text-slate-400 font-bold text-lg">Aucun jeu ne correspond !</p>
+                <button onclick="resetFilters()" class="text-indigo-600 font-black mt-3 underline decoration-4 underline-offset-4">Tout réinitialiser</button>
+            </div>
+        </section>
+
+        <section id="view-add" class="view-transition">
+            <div class="flex items-center justify-between mb-8">
+                <h2 class="text-3xl font-black text-slate-900 fun-title">Ajouter un trésor 💎</h2>
+                <button onclick="switchView('library')" class="bg-white p-3 rounded-full shadow-md text-slate-400"><i data-lucide="x"></i></button>
+            </div>
+            
+            <form id="addGameForm" class="space-y-6">
+                <!-- PHOTO -->
+                <div class="relative group">
+                    <input type="file" id="gamePhoto" accept="image/*" capture="environment" class="hidden">
+                    <div onclick="document.getElementById('gamePhoto').click()" 
+                        class="aspect-[4/3] w-full rounded-[40px] border-4 border-dashed border-indigo-200 bg-white flex flex-col items-center justify-center cursor-pointer overflow-hidden shadow-inner">
+                        <div id="uploadUI" class="text-center">
+                            <div class="w-16 h-16 bg-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                                <i data-lucide="camera" class="text-white"></i>
+                            </div>
+                            <p class="font-black text-indigo-600">Prendre la photo</p>
+                        </div>
+                        <img id="photoPreview" class="hidden w-full h-full object-cover">
+                    </div>
+                </div>
+
+                <div class="bg-white p-8 rounded-[40px] shadow-xl border-b-8 border-slate-100 space-y-6">
+                    <!-- NOM -->
+                    <div>
+                        <label class="block text-[11px] font-black uppercase text-indigo-400 mb-2 tracking-widest">Nom du jeu</label>
+                        <input type="text" id="gameName" required placeholder="Ex: Catan..." class="w-full bg-slate-50 border-4 border-transparent p-4 rounded-2xl focus:border-indigo-400 outline-none font-bold">
+                    </div>
+
+                    <!-- JOUEURS -->
+                    <div class="flex gap-3">
+                        <div class="flex-1">
+                            <label class="block text-[11px] font-black uppercase text-indigo-400 mb-2">Min Joueurs</label>
+                            <input type="number" id="gamePlayersMin" required class="w-full bg-slate-50 p-4 rounded-2xl font-bold text-center border-4 border-transparent focus:border-indigo-400 outline-none">
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-[11px] font-black uppercase text-indigo-400 mb-2">Max Joueurs</label>
+                            <input type="number" id="gamePlayersMax" required class="w-full bg-slate-50 p-4 rounded-2xl font-bold text-center border-4 border-transparent focus:border-indigo-400 outline-none">
+                        </div>
+                    </div>
+
+                    <!-- AGE (SAISIE LIBRE) -->
+                    <div>
+                        <label class="block text-[11px] font-black uppercase text-indigo-400 mb-2 tracking-widest">Âge minimum</label>
+                        <input type="number" id="gameAge" placeholder="Ex: 8" required class="w-full bg-slate-50 border-4 border-transparent p-4 rounded-2xl focus:border-indigo-400 outline-none font-bold text-lg">
+                    </div>
+
+                    <!-- CATEGORIE -->
+                    <div>
+                        <label class="block text-[11px] font-black uppercase text-indigo-400 mb-2 tracking-widest">Catégorie</label>
+                        <div class="relative">
+                            <select id="gameStyle" class="w-full bg-slate-50 border-4 border-transparent p-4 rounded-2xl focus:border-indigo-400 outline-none font-bold appearance-none text-lg">
+                                <option value="Plateau">🏰 Plateau</option>
+                                <option value="Cartes">🃏 Cartes</option>
+                                <option value="Ambiance">🥳 Ambiance</option>
+                                <option value="Dés">🎲 Dés</option>
+                                <option value="Stratégie">🧠 Stratégie</option>
+                            </select>
+                            <i data-lucide="chevron-down" class="absolute right-5 top-1/2 -translate-y-1/2 text-indigo-300 pointer-events-none"></i>
+                        </div>
+                    </div>
+
+                    <!-- COMMENTAIRE -->
+                    <div>
+                        <label class="block text-[11px] font-black uppercase text-indigo-400 mb-2 tracking-widest">Commentaire</label>
+                        <textarea id="gameComment" rows="3" placeholder="Super jeu pour..." class="w-full bg-slate-50 p-4 rounded-2xl font-bold italic outline-none border-4 border-transparent focus:border-indigo-400"></textarea>
+                    </div>
+                </div>
+
+                <button type="submit" id="submitBtn" class="w-full bg-indigo-600 text-white font-black py-6 rounded-[30px] shadow-2xl active:scale-95 transition-all text-xl border-b-8 border-indigo-800">
+                    Enregistrer ! 🚀
+                </button>
+            </form>
+        </section>
+    </main>
+
+    <button id="fab" onclick="switchView('add')" class="floating-add w-20 h-20 text-white rounded-[28px] flex items-center justify-center active:scale-90 transition-all">
+        <i data-lucide="plus" class="w-10 h-10"></i>
+    </button>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // CONFIG ORIGINALE CONSERVÉE
+        const firebaseConfig = {
+            apiKey: "AIzaSyCRXTsF3oFwJUGieEFPUTAndKmkwQ3t9Nk",
+            authDomain: "philojeux-donzere.firebaseapp.com",
+            projectId: "philojeux-donzere",
+            storageBucket: "philojeux-donzere.firebasestorage.app",
+            messagingSenderId: "696570498908",
+            appId: "1:696570498908:web:8bc94f86b56125fb92bb99"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = 'donzere-ludo';
+
+        let games = [];
+        let activeStyles = ['all']; 
+
+        // Initialisation Auth
+        async function init() {
+            try {
+                await signInAnonymously(auth);
+            } catch (err) {
+                console.error("Auth error", err);
+                document.getElementById('loadingOverlay').innerHTML = "<p class='text-red-500 font-bold'>Erreur de connexion</p>";
+            }
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.getElementById('loadingOverlay').style.display = 'none';
+                setupRealtimeListener();
+            }
+        });
+
+        function setupRealtimeListener() {
+            const gamesRef = collection(db, 'artifacts', appId, 'public', 'data', 'games');
+            onSnapshot(gamesRef, (snapshot) => {
+                games = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                // Tri par création
+                games.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+                renderGames();
+            });
+        }
+
+        window.switchView = function(view) {
+            document.querySelectorAll('.view-transition').forEach(v => v.classList.remove('active'));
+            document.getElementById('view-' + view).classList.add('active');
+            document.getElementById('fab').style.display = (view === 'library') ? 'flex' : 'none';
+            if(view === 'library') renderGames();
+        }
+
+        // --- GESTION PHOTO ---
+        let base64Photo = null;
+        document.getElementById('gamePhoto').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    base64Photo = e.target.result;
+                    document.getElementById('photoPreview').src = base64Photo;
+                    document.getElementById('photoPreview').classList.remove('hidden');
+                    document.getElementById('uploadUI').classList.add('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // --- GESTION DES FILTRES MULTIPLES ---
+        window.toggleStyle = function(style, element) {
+            if(style === 'all') {
+                activeStyles = ['all'];
+            } else {
+                if(activeStyles.includes('all')) {
+                    activeStyles = [];
+                }
+                if(activeStyles.includes(style)) {
+                    activeStyles = activeStyles.filter(s => s !== style);
+                } else {
+                    activeStyles.push(style);
+                }
+                if(activeStyles.length === 0) {
+                    activeStyles = ['all'];
+                }
+            }
+            updateChipsUI();
+            renderGames();
+        }
+
+        function updateChipsUI() {
+            const chips = document.querySelectorAll('.chip');
+            chips.forEach(chip => {
+                const onclickText = chip.getAttribute('onclick');
+                let isActive = false;
+                if(activeStyles.includes('all') && onclickText.includes("'all'")) isActive = true;
+                else {
+                    activeStyles.forEach(s => {
+                        if(s !== 'all' && onclickText.includes(`'${s}'`)) isActive = true;
+                    });
+                }
+                if(isActive) chip.classList.add('active');
+                else chip.classList.remove('active');
+            });
+        }
+
+        // Ecouteurs filtres
+        document.getElementById('filterAge').addEventListener('change', renderGames);
+        document.getElementById('filterPlayerCountSelect').addEventListener('change', renderGames);
+
+        window.resetFilters = function() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('filterAge').value = 'all';
+            document.getElementById('filterPlayerCountSelect').value = '0';
+            window.toggleStyle('all', null);
+        }
+
+        function renderGames() {
+            const container = document.getElementById('gamesContainer');
+            const searchInput = document.getElementById('searchInput');
+            if(!searchInput) return;
+
+            const search = searchInput.value.toLowerCase();
+            const filterAge = document.getElementById('filterAge').value;
+            const filterPlayerCount = parseInt(document.getElementById('filterPlayerCountSelect').value);
+            
+            const filtered = games.filter(g => {
+                // 1. Recherche texte
+                const matchesSearch = g.name?.toLowerCase().includes(search);
+                
+                // 2. Filtre Style (Multi)
+                const matchesStyle = activeStyles.includes('all') || activeStyles.includes(g.style);
+
+                // 3. Filtre Age (Intelligent)
+                // On récupère l'âge minimum saisi pour le jeu
+                const gameAge = parseInt(g.ageRange) || 0; // ageRange contient maintenant un chiffre
+                let matchesAge = true;
+                if(filterAge === '6-8') {
+                    // Pour les 6-8 ans : le jeu doit être accessible dès 6, 7 ou 8 ans
+                    matchesAge = (gameAge >= 6 && gameAge <= 8);
+                }
+                else if(filterAge === '8-10') {
+                    // Pour les 8-10 ans : le jeu doit être accessible dès 8, 9 ou 10 ans
+                    matchesAge = (gameAge >= 8 && gameAge <= 10);
+                }
+                else if(filterAge === '+10') {
+                    // Pour les 10+ : le jeu doit être accessible dès 10 ans ou plus
+                    matchesAge = (gameAge >= 10);
+                }
+
+                // 4. Filtre Joueurs (Amélioré)
+                let matchesPlayers = true;
+                if (filterPlayerCount > 0) {
+                    if (filterPlayerCount === 6) {
+                        // Logique "6+" : On veut les jeux qui supportent AU MOINS 6 joueurs
+                        // Donc si maxPlayers est >= 6, c'est bon (ex: jeu pour 7 joueurs passe)
+                        matchesPlayers = (parseInt(g.playersMax) || 0) >= 6;
+                    } else {
+                        // Logique normale (2 ou 4 joueurs) : Est-ce que "X" joueurs peuvent jouer ?
+                        // Il faut que X soit compris entre min et max
+                        const min = parseInt(g.playersMin) || 0;
+                        const max = parseInt(g.playersMax) || 0;
+                        matchesPlayers = (filterPlayerCount >= min && filterPlayerCount <= max);
+                    }
+                }
+
+                return matchesSearch && matchesStyle && matchesAge && matchesPlayers;
+            });
+
+            document.getElementById('statsCounter').innerText = `⭐️ ${games.length} JEUX AU TOTAL ⭐️`;
+            container.innerHTML = '';
+            
+            if(filtered.length === 0) {
+                document.getElementById('emptyState').classList.remove('hidden');
+            } else {
+                document.getElementById('emptyState').classList.add('hidden');
+                filtered.forEach(game => {
+                    const card = document.createElement('div');
+                    // MODIFICATION STYLE CARTE : Flex column pour mosaïque + hauteur pleine
+                    card.className = `game-card bg-white shadow-xl flex flex-col h-full relative style-${game.style}`;
+                    
+                    // Badge Age (Couleur dynamique selon l'âge saisi)
+                    const ageVal = parseInt(game.ageRange) || 0;
+                    let badgeAgeColor = "bg-slate-100 text-slate-600";
+                    if(ageVal < 8) badgeAgeColor = "bg-green-100 text-green-700";
+                    else if(ageVal >= 8 && ageVal < 10) badgeAgeColor = "bg-orange-100 text-orange-700";
+                    else if(ageVal >= 10) badgeAgeColor = "bg-purple-100 text-purple-700";
+                    
+                    const ageBadge = game.ageRange ? `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full ${badgeAgeColor} border border-current">Dès ${game.ageRange} ans</span>` : '';
+
+                    card.innerHTML = `
+                        <!-- IMAGE EN HAUT (Format carré ou rectangulaire) -->
+                        <div class="h-32 w-full bg-slate-100 relative group">
+                            <img src="${game.image || 'https://via.placeholder.com/150'}" class="w-full h-full object-cover">
+                            <!-- Style tag flottant sur l'image -->
+                            <span class="absolute top-2 right-2 text-[8px] font-black uppercase px-2 py-0.5 rounded-full bg-white/90 shadow-sm border border-slate-100">${game.style}</span>
+                        </div>
+                        
+                        <!-- CONTENU EN BAS -->
+                        <div class="p-3 flex flex-col flex-1">
+                            <h3 class="font-black text-slate-900 text-sm leading-tight mb-1 line-clamp-2">${game.name}</h3>
+                            <div class="mb-2">${ageBadge}</div>
+                            
+                            <p class="text-[10px] italic opacity-70 line-clamp-2 mb-2 flex-1">${game.comment || ""}</p>
+                            
+                            <div class="flex items-center justify-between mt-auto pt-2 border-t border-slate-50">
+                                 <div class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500">
+                                     <i data-lucide="users" class="w-3 h-3"></i> ${game.playersMin}-${game.playersMax}
+                                 </div>
+                                 <button class="delete-btn text-slate-300 hover:text-red-500 bg-slate-50 p-1 rounded-full" data-id="${game.id}"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+
+                container.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.onclick = () => deleteGame(btn.getAttribute('data-id'));
+                });
+            }
+            lucide.createIcons();
+        }
+
+        document.getElementById('addGameForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.innerText = "Enregistrement...";
+
+            try {
+                const gamesRef = collection(db, 'artifacts', appId, 'public', 'data', 'games');
+                await addDoc(gamesRef, {
+                    name: document.getElementById('gameName').value,
+                    playersMin: document.getElementById('gamePlayersMin').value,
+                    playersMax: document.getElementById('gamePlayersMax').value,
+                    style: document.getElementById('gameStyle').value,
+                    ageRange: document.getElementById('gameAge').value, // On stocke le chiffre brut
+                    comment: document.getElementById('gameComment').value,
+                    image: base64Photo,
+                    createdAt: serverTimestamp()
+                });
+                
+                e.target.reset();
+                base64Photo = null;
+                document.getElementById('photoPreview').classList.add('hidden');
+                document.getElementById('uploadUI').classList.remove('hidden');
+                switchView('library');
+            } catch (err) {
+                console.error("Add error", err);
+                alert("Erreur lors de l'ajout. Verifiez votre connexion.");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Enregistrer ! 🚀";
+            }
+        });
+
+        async function deleteGame(gameId) {
+            if(confirm('Supprimer ce jeu définitivement ?')) {
+                try {
+                    const gameDoc = doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId);
+                    await deleteDoc(gameDoc);
+                } catch (err) {
+                    console.error("Delete error", err);
+                }
+            }
+        }
+
+        document.getElementById('searchInput').addEventListener('input', renderGames);
+        init();
+    </script>
+</body>
+</html>
