@@ -758,18 +758,35 @@
             }
         });
 
+window.toggleFavorite = async function(gameId, currentStatus) {
+            try {
+                // On cible le document du jeu dans Firebase
+                const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId);
+                
+                // On met à jour uniquement le champ isFavorite en inversant sa valeur
+                await updateDoc(gameRef, {
+                    isFavorite: !currentStatus
+                });
+                
+                console.log("Statut favori mis à jour pour :", gameId);
+            } catch (err) {
+                console.error("Erreur favoris:", err);
+                alert("Impossible de modifier le favori. Vérifiez vos permissions Firebase.");
+            }
+        };
+
         window.deleteGame = async function(gameId) {
-    if(confirm('Supprimer ce jeu définitivement ?')) {
-        try {
-            const gameDoc = doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId);
-            await deleteDoc(gameDoc);
-            console.log("Jeu supprimé :", gameId);
-        } catch (err) { 
-            console.error("Delete error", err);
-            alert("Erreur lors de la suppression. Vérifiez vos règles Firebase.");
+            if(confirm('Supprimer ce jeu définitivement ?')) {
+                try {
+                    const gameDoc = doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId);
+                    await deleteDoc(gameDoc);
+                    console.log("Jeu supprimé :", gameId);
+                } catch (err) { 
+                    console.error("Delete error", err);
+                    alert("Erreur lors de la suppression. Vérifiez vos règles Firebase.");
+                }
+            }
         }
-    }
-}
 
         document.getElementById('searchInput').addEventListener('input', renderGames);
         init();
