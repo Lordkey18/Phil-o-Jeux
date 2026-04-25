@@ -752,14 +752,18 @@
             }
         });
 
-        async function deleteGame(gameId) {
-            if(confirm('Supprimer ce jeu définitivement ?')) {
-                try {
-                    const gameDoc = doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId);
-                    await deleteDoc(gameDoc);
-                } catch (err) { console.error("Delete error", err); }
-            }
+        window.deleteGame = async function(gameId) {
+    if(confirm('Supprimer ce jeu définitivement ?')) {
+        try {
+            const gameDoc = doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId);
+            await deleteDoc(gameDoc);
+            console.log("Jeu supprimé :", gameId);
+        } catch (err) { 
+            console.error("Delete error", err);
+            alert("Erreur lors de la suppression. Vérifiez vos règles Firebase.");
         }
+    }
+}
 
         document.getElementById('searchInput').addEventListener('input', renderGames);
         init();
