@@ -610,96 +610,103 @@
             window.toggleStyle('all', null);
         }
 
-        function renderGames() {
-            const container = document.getElementById('gamesContainer');
-            const searchInput = document.getElementById('searchInput');
-            if(!searchInput) return;
+function renderGames() {
+    const container = document.getElementById('gamesContainer');
+    const searchInput = document.getElementById('searchInput');
+    if(!searchInput) return;
 
-            const search = searchInput.value.toLowerCase();
-            const filterAge = document.getElementById('filterAge').value;
-            const filterPlayerCount = parseInt(document.getElementById('filterPlayerCountInput').value) || 0;
+    const search = searchInput.value.toLowerCase();
+    const filterAge = document.getElementById('filterAge').value;
+    const filterPlayerCount = parseInt(document.getElementById('filterPlayerCountInput').value) || 0;
+    
+    const filtered = games.filter(g => {
+        const matchesSearch = g.name?.toLowerCase().includes(search);
+        
+        let matchesStyle = false;
+        const gStyles = Array.isArray(g.style) ? g.style : [g.style];
+        
+        // --- LOGIQUE FILTRE FAVORIS ---
+        if(activeStyles.includes('all')) {
+            matchesStyle = true;
+        } else if (activeStyles.includes('Favoris')) {
+            matchesStyle = g.isFavorite === true;
+        } else {
+            matchesStyle = gStyles.some(s => activeStyles.includes(s));
+        }
+
+        const gameAge = parseInt(g.ageRange) || 0;
+        let matchesAge = true;
+        if(filterAge === '6-8') matchesAge = (gameAge >= 6 && gameAge <= 8);
+        else if(filterAge === '8-10') matchesAge = (gameAge >= 8 && gameAge <= 10);
+        else if(filterAge === '+10') matchesAge = (gameAge >= 10);
+
+        let matchesPlayers = true;
+        if (filterPlayerCount > 0) {
+            const min = parseInt(g.playersMin) || 0;
+            const max = parseInt(g.playersMax) || 0;
+            matchesPlayers = (filterPlayerCount >= min && filterPlayerCount <= max);
+        }
+        return matchesSearch && matchesStyle && matchesAge && matchesPlayers;
+    });
+
+    // Mise à jour du compteur avec le nombre de jeux filtrés
+    document.getElementById('statsCounter').innerText = `⭐️ ${filtered.length} JEUX TROUVÉS ⭐️`;
+    container.innerHTML = '';
+    
+    if(filtered.length === 0) {
+        document.getElementById('emptyState').classList.remove('hidden');
+    } else {
+        document.getElementById('emptyState').classList.add('hidden');
+        filtered.forEach(game => {
+            const card = document.createElement('div');
             
-            const filtered = games.filter(g => {
-                const matchesSearch = g.name?.toLowerCase().includes(search);
-                
-                let matchesStyle = false;
-                const gStyles = Array.isArray(g.style) ? g.style : [g.style];
-                
-                if(activeStyles.includes('all')) matchesStyle = true;
-                else {
-                    matchesStyle = gStyles.some(s => activeStyles.includes(s));
-                }
-
-                const gameAge = parseInt(g.ageRange) || 0;
-                let matchesAge = true;
-                if(filterAge === '6-8') matchesAge = (gameAge >= 6 && gameAge <= 8);
-                else if(filterAge === '8-10') matchesAge = (gameAge >= 8 && gameAge <= 10);
-                else if(filterAge === '+10') matchesAge = (gameAge >= 10);
-
-                let matchesPlayers = true;
-                if (filterPlayerCount > 0) {
-                    const min = parseInt(g.playersMin) || 0;
-                    const max = parseInt(g.playersMax) || 0;
-                    matchesPlayers = (filterPlayerCount >= min && filterPlayerCount <= max);
-                }
-                return matchesSearch && matchesStyle && matchesAge && matchesPlayers;
-            });
-
-            document.getElementById('statsCounter').innerText = `⭐️ ${games.length} JEUX AU TOTAL ⭐️`;
-            container.innerHTML = '';
+            const mainStyle = Array.isArray(game.style) ? game.style[0] : game.style;
+            const gStyles = Array.isArray(game.style) ? game.style : [game.style];
             
-            if(filtered.length === 0) {
-                document.getElementById('emptyState').classList.remove('hidden');
-            } else {
-                document.getElementById('emptyState').classList.add('hidden');
-                filtered.forEach(game => {
-                    const card = document.createElement('div');
-                    
-                    const mainStyle = Array.isArray(game.style) ? game.style[0] : game.style;
-                    const gStyles = Array.isArray(game.style) ? game.style : [game.style];
-                    
-                    card.className = `game-card bg-white shadow-xl flex flex-col h-full relative style-${mainStyle}`;
-                    
-                    // OPEN DETAILS ON CLICK
-                    card.onclick = () => openGameDetails(game.id);
+            card.className = `game-card bg-white shadow-xl flex flex-col h-full relative style-${mainStyle}`;
+            
+            // OPEN DETAILS ON CLICK
+            card.onclick = () => openGameDetails(game.id);
 
-                    const ageVal = parseInt(game.ageRange) || 0;
-                    let badgeColor = "bg-slate-100 text-slate-600";
-                    if(ageVal < 8) badgeColor = "bg-green-100 text-green-700";
-                    else if(ageVal >= 8 && ageVal < 10) badgeColor = "bg-orange-100 text-orange-700";
-                    else if(ageVal >= 10) badgeColor = "bg-purple-100 text-purple-700";
-                    
-                    const stylesBadges = gStyles.map(s => `<span class="text-[8px] font-black uppercase px-2 py-0.5 rounded-full bg-white/50 border border-current mr-1">${s}</span>`).join('');
+            const ageVal = parseInt(game.ageRange) || 0;
+            let badgeColor = "bg-slate-100 text-slate-600";
+            if(ageVal < 8) badgeColor = "bg-green-100 text-green-700";
+            else if(ageVal >= 8 && ageVal < 10) badgeColor = "bg-orange-100 text-orange-700";
+            else if(ageVal >= 10) badgeColor = "bg-purple-100 text-purple-700";
+            
+            const stylesBadges = gStyles.map(s => `<span class="text-[8px] font-black uppercase px-2 py-0.5 rounded-full bg-white/50 border border-current mr-1">${s}</span>`).join('');
 
-                    card.innerHTML = `
-                        <div class="h-32 w-full bg-slate-100 relative group">
-                            <img src="${game.image || 'https://via.placeholder.com/150'}" class="w-full h-full object-cover">
+            card.innerHTML = `
+                <div class="h-32 w-full bg-slate-100 relative group">
+                    <img src="${game.image || 'https://via.placeholder.com/150'}" class="w-full h-full object-cover">
+                </div>
+                <div class="p-3 flex flex-col flex-1">
+                    <div class="flex flex-wrap gap-1 mb-1 items-center">
+                        ${stylesBadges}
+                    </div>
+                    <h3 class="font-black text-slate-900 text-sm leading-tight mb-1 line-clamp-2">${game.name}</h3>
+                    <div class="mb-2">
+                        <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full ${badgeColor} border border-current">Dès ${game.ageRange} ans</span>
+                    </div>
+                    <p class="text-[10px] italic opacity-70 line-clamp-2 mb-2 flex-1">${game.comment || ""}</p>
+                    <div class="flex items-center justify-between mt-auto pt-2 border-t border-slate-50">
+                         <div class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500">
+                             <i data-lucide="users" class="w-3 h-3"></i> ${game.playersMin}-${game.playersMax}
+                         </div>
+                         <div class="flex gap-2">
+                            <button class="favorite-btn ${game.isFavorite ? 'text-red-500' : 'text-slate-300'} hover:scale-110 transition-transform" 
+                                onclick="event.stopPropagation(); window.toggleFavorite('${game.id}', ${game.isFavorite || false})">
+                                <i data-lucide="heart" class="w-4 h-4 ${game.isFavorite ? 'fill-current' : ''}"></i>
+                            </button>
+                            <button class="edit-btn text-indigo-300 hover:text-indigo-600 bg-indigo-50 p-1 rounded-full" 
+                               onclick="event.stopPropagation(); editGame('${game.id}')">
+                               <i data-lucide="pencil" class="w-3 h-3"></i>
+                            </button>
+                            <button class="delete-btn text-red-300 hover:text-red-600 bg-red-50 p-1 rounded-full" 
+                               onclick="event.stopPropagation(); window.deleteGame('${game.id}')">
+                               <i data-lucide="trash-2" class="w-3 h-3"></i>
+                            </button>
                         </div>
-                        <div class="p-3 flex flex-col flex-1">
-                            <div class="flex flex-wrap gap-1 mb-1 items-center">
-                                ${stylesBadges}
-                            </div>
-                            <h3 class="font-black text-slate-900 text-sm leading-tight mb-1 line-clamp-2">${game.name}</h3>
-                            <div class="mb-2"><span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full ${badgeColor} border border-current">Dès ${game.ageRange} ans</span></div>
-                            <p class="text-[10px] italic opacity-70 line-clamp-2 mb-2 flex-1">${game.comment || ""}</p>
-                            <div class="flex items-center justify-between mt-auto pt-2 border-t border-slate-50">
-                                 <div class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500">
-                                     <i data-lucide="users" class="w-3 h-3"></i> ${game.playersMin}-${game.playersMax}
-                                 </div>
-                                 <div class="flex gap-2">
-    <button class="favorite-btn ${game.isFavorite ? 'text-red-500' : 'text-slate-300'} hover:scale-110 transition-transform" 
-        onclick="event.stopPropagation(); window.toggleFavorite('${game.id}', ${game.isFavorite || false})">
-        <i data-lucide="heart" class="w-4 h-4 ${game.isFavorite ? 'fill-current' : ''}"></i>
-    </button>
-    <button class="edit-btn text-indigo-300 hover:text-indigo-600 bg-indigo-50 p-1 rounded-full" 
-       onclick="event.stopPropagation(); editGame('${game.id}')">
-       <i data-lucide="pencil" class="w-3 h-3"></i>
-    </button>
-    <button class="delete-btn text-red-300 hover:text-red-600 bg-red-50 p-1 rounded-full" 
-       onclick="event.stopPropagation(); window.deleteGame('${game.id}')">
-       <i data-lucide="trash-2" class="w-3 h-3"></i>
-    </button>
-</div>
                             </div>
                         </div>
                     `;
